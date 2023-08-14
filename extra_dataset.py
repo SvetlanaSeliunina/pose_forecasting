@@ -4,6 +4,7 @@ import data_utils
 import torch
 import os
 import json
+from sklearn.preprocessing import normalize
 
 #Nose = 0,
 #Neck = 1,
@@ -89,23 +90,21 @@ class extra_Dataset(Dataset):
 
                     for kp_idx in range(NUM_KPS_USED):
                         if (KPS[kp_idx] == 19):
-                            all_xs.append((kps[17]['pos'][0] + kps[18]['pos'][0])/2)
-                            all_ys.append((kps[17]['pos'][1] + kps[18]['pos'][1])/2)
-                            all_zs.append((kps[17]['pos'][2] + kps[18]['pos'][2])/2)
+                            all_xs.append((kps[17]['pos'][0] + kps[18]['pos'][0])/2-kps[8]['pos'][0])
+                            all_ys.append((kps[17]['pos'][1] + kps[18]['pos'][1])/2-kps[8]['pos'][1])
+                            all_zs.append((kps[17]['pos'][2] + kps[18]['pos'][2])/2-kps[8]['pos'][2])
                         elif (KPS[kp_idx] == 20):
-                            all_xs.append((kps[8]['pos'][0] + kps[1]['pos'][0]) / 2)
-                            all_ys.append((kps[8]['pos'][1] + kps[1]['pos'][1]) / 2)
-                            all_zs.append((kps[8]['pos'][2] + kps[1]['pos'][2]) / 2)
+                            all_xs.append((kps[8]['pos'][0] + kps[1]['pos'][0]) / 2-kps[8]['pos'][0])
+                            all_ys.append((kps[8]['pos'][1] + kps[1]['pos'][1]) / 2-kps[8]['pos'][1])
+                            all_zs.append((kps[8]['pos'][2] + kps[1]['pos'][2]) / 2-kps[8]['pos'][2])
                         else:
                             kp = kps[KPS[kp_idx]]
                             all_xs.append(kp['pos'][0])
                             all_ys.append(kp['pos'][1])
                             all_zs.append(kp['pos'][2])
 
-                xs = np.array(all_xs) / np.linalg.norm(np.array(all_xs))
-                ys = np.array(all_ys) / np.linalg.norm(np.array(all_ys))
-                zs = np.array(all_zs) / np.linalg.norm(np.array(all_zs))
-                all = np.array((xs, ys, zs)).T
+                all = np.array((all_xs, all_ys, all_zs)).T
+                all = normalize(all)
                 all = all.reshape(-1,17*3)
                 n, d = all.shape
                 even_list = range(0, n, self.sample_rate)
