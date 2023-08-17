@@ -99,12 +99,12 @@ class extra_Dataset(Dataset):
                             all_zs.append((kps[8]['pos'][2] + kps[1]['pos'][2]) / 2-kps[8]['pos'][2])
                         else:
                             kp = kps[KPS[kp_idx]]
-                            all_xs.append(kp['pos'][0])
-                            all_ys.append(kp['pos'][1])
-                            all_zs.append(kp['pos'][2])
+                            all_xs.append(kp['pos'][0]-kps[8]['pos'][0])
+                            all_ys.append(kp['pos'][1]-kps[8]['pos'][1])
+                            all_zs.append(kp['pos'][2]-kps[8]['pos'][2])
 
-                all = np.array((all_xs, all_ys, all_zs)).T
-                all = normalize(all)
+                all = np.array((all_xs, all_zs, all_ys)).T
+                #all = normalize(all)
                 all = all.reshape(-1,17*3)
                 n, d = all.shape
                 even_list = range(0, n, self.sample_rate)
