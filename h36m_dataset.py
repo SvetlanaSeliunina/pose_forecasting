@@ -62,7 +62,7 @@ class H36M_Dataset(Dataset):
                         # remove global rotation and translation
                         the_sequence[:, 0:6] = 0
                         p3d = data_utils.expmap2xyz_torch(the_sequence)
-                        #p3d = torch.nn.functional.normalize(p3d, p=2.0, dim=2)
+                        p3d = torch.nn.functional.normalize(p3d, p=2.0, dim=2)
                         # self.p3d[(subj, action, subact)] = p3d.view(num_frames, -1).cpu().data.numpy()
                         self.p3d[key] = p3d.view(num_frames, -1).cpu().data.numpy()
 
@@ -85,7 +85,7 @@ class H36M_Dataset(Dataset):
                     the_seq1 = torch.from_numpy(the_sequence1).float().cuda()
                     the_seq1[:, 0:6] = 0
                     p3d1 = data_utils.expmap2xyz_torch(the_seq1)
-                    #p3d1 = torch.nn.functional.normalize(p3d1, p=2.0, dim=2)
+                    p3d1 = torch.nn.functional.normalize(p3d1, p=2.0, dim=2)
                     # self.p3d[(subj, action, 1)] = p3d1.view(num_frames1, -1).cpu().data.numpy()
                     self.p3d[key] = p3d1.view(num_frames1, -1).cpu().data.numpy()
 
@@ -100,7 +100,7 @@ class H36M_Dataset(Dataset):
                     the_seq2 = torch.from_numpy(the_sequence2).float().cuda()
                     the_seq2[:, 0:6] = 0
                     p3d2 = data_utils.expmap2xyz_torch(the_seq2)
-                    #p3d2 = torch.nn.functional.normalize(p3d2, p=2.0, dim=2)
+                    p3d2 = torch.nn.functional.normalize(p3d2, p=2.0, dim=2)
                     # self.p3d[(subj, action, 2)] = p3d2.view(num_frames2, -1).cpu().data.numpy()
                     self.p3d[key + 1] = p3d2.view(num_frames2, -1).cpu().data.numpy()
 

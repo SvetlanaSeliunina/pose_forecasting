@@ -104,7 +104,7 @@ class extra_Dataset(Dataset):
                             all_zs.append(kp['pos'][2]-kps[8]['pos'][2])
 
                 all = np.array((all_xs, all_zs, all_ys)).T
-                #all = normalize(all)
+                all = normalize(all)
                 all = all.reshape(-1,17*3)
                 n, d = all.shape
                 even_list = range(0, n, self.sample_rate)
