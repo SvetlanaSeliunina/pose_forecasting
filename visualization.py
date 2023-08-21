@@ -1,23 +1,6 @@
-%matplotlib notebook
-#%matplotlib widget
-
-%load_ext autoreload
-%autoreload 2
-
-import pandas as pd # For Variable inspector
-
 import torch
-import os
-from h36m_dataset import H36M_Dataset
-from extra_dataset import extra_Dataset
-from torch.utils.data import DataLoader
-import torch.optim as optim
 import numpy as np
-import argparse
-from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 
-import matplotlib.animation
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt
@@ -104,7 +87,7 @@ def FrameVisualization(frame):
         
         ax.plot(link_xs, link_zs, link_ys, color = color)
 
-        def init():
+def init():
     
     global frame_num
     frame_num = 0
