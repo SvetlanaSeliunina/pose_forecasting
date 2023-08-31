@@ -2,7 +2,7 @@ from utils import *
 
 
 @torch.no_grad()
-def test(model, train_loader, test_loader, extra_loader, dev, input_n, output_n):
+def test(model, train_loader, test_loader, extra_loader, dev, input_n, output_n, autoreg=False):
     train_loss, test_loss, extra_loss = 0, 0, 0
     train_seq, test_seq, extra_seq = [], [], []
     device = dev
@@ -15,13 +15,29 @@ def test(model, train_loader, test_loader, extra_loader, dev, input_n, output_n)
 
         sequences_train = batch[:, 0:input_n, :]
         sequences_gt = batch[:, input_n:input_n + output_n, :]
-        sequences_predict = model(sequences_train)
+
+        if autoreg:
+            sequences_predict = torch.Tensor().to(device)
+            for i in range(output_n):
+                if i == 0:
+                    input_train = sequences_train
+                elif i >= input_n:
+                    input_train = sequences_predict[:, (i - input_n):, :]
+                else:
+                    input_train = sequences_train[:, i:, :]
+                    input_train = torch.cat((input_train, sequences_predict), 1)
+                pred_one = model(input_train)
+                sequences_predict = torch.cat((sequences_predict, pred_one), 1)
+        else:
+            sequences_predict = model(sequences_train)
+        # sequences_predict = model(sequences_train)
         loss = mpjpe_error(sequences_predict, sequences_gt)
         train_loss += loss * batch_dim
+
         if cnt == len(train_loader)-1:
-            train_input = batch[0, :, :].cpu()
+            train_input = batch.cpu()
             train_seq.append(train_input)
-            train_output = torch.cat((sequences_train, sequences_predict), 1)[0, :, :].cpu()
+            train_output = torch.cat((sequences_train, sequences_predict), 1).cpu()
             train_seq.append(train_output)
     train_loss = train_loss.detach().cpu() / n
 
@@ -33,13 +49,28 @@ def test(model, train_loader, test_loader, extra_loader, dev, input_n, output_n)
 
         sequences_train = batch[:, 0:input_n, :]
         sequences_gt = batch[:, input_n:input_n + output_n, :]
-        sequences_predict = model(sequences_train)
+
+        if autoreg:
+            sequences_predict = torch.Tensor().to(device)
+            for i in range(output_n):
+                if i == 0:
+                    input_train = sequences_train
+                elif i >= input_n:
+                    input_train = sequences_predict[:, (i - input_n):, :]
+                else:
+                    input_train = sequences_train[:, i:, :]
+                    input_train = torch.cat((input_train, sequences_predict), 1)
+                pred_one = model(input_train)
+                sequences_predict = torch.cat((sequences_predict, pred_one), 1)
+        else:
+            sequences_predict = model(sequences_train)
+        # sequences_predict = model(sequences_train)
         loss = mpjpe_error(sequences_predict, sequences_gt)
         test_loss += loss * batch_dim
         if cnt == len(test_loader)-1:
-            test_input = batch[0, :, :].cpu()
+            test_input = batch.cpu()
             test_seq.append(test_input)
-            test_output = torch.cat((sequences_train, sequences_predict), 1)[0, :, :].cpu()
+            test_output = torch.cat((sequences_train, sequences_predict), 1).cpu()
             test_seq.append(test_output)
     test_loss = test_loss.detach().cpu() / n
 
@@ -51,13 +82,28 @@ def test(model, train_loader, test_loader, extra_loader, dev, input_n, output_n)
 
         sequences_train = batch[:, 0:input_n, :]
         sequences_gt = batch[:, input_n:input_n + output_n, :]
-        sequences_predict = model(sequences_train)
+
+        if autoreg:
+            sequences_predict = torch.Tensor().to(device)
+            for i in range(output_n):
+                if i == 0:
+                    input_train = sequences_train
+                elif i >= input_n:
+                    input_train = sequences_predict[:, (i - input_n):, :]
+                else:
+                    input_train = sequences_train[:, i:, :]
+                    input_train = torch.cat((input_train, sequences_predict), 1)
+                pred_one = model(input_train)
+                sequences_predict = torch.cat((sequences_predict, pred_one), 1)
+        else:
+            sequences_predict = model(sequences_train)
+        # sequences_predict = model(sequences_train)
         loss = mpjpe_error(sequences_predict, sequences_gt)
         extra_loss += loss * batch_dim
         if cnt == len(extra_loader) - 1:
-            extra_input = batch[0, :, :].cpu()
+            extra_input = batch.cpu()
             extra_seq.append(extra_input)
-            extra_output = torch.cat((sequences_train, sequences_predict), 1)[0, :, :].cpu()
+            extra_output = torch.cat((sequences_train, sequences_predict), 1).cpu()
             extra_seq.append(extra_output)
     extra_loss = extra_loss.detach().cpu() / n
 

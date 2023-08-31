@@ -1,15 +1,36 @@
 import torch.nn as nn
 
 
+class SELayer(nn.Module):
+    def __init__(self, seq_len, r=4, use_max_pooling=False):
+        super().__init__()
+        self.squeeze = nn.AdaptiveAvgPool1d(1) if not use_max_pooling else nn.AdaptiveMaxPool1d(1)
+        self.excitation = nn.Sequential(
+            nn.Linear(seq_len, seq_len // r, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(seq_len // r, seq_len, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        bs, s, h = x.shape
+        y = self.squeeze(x).view(bs, s)
+        y = self.excitation(y).view(bs, s, 1)
+        return x * y.expand_as(x)
+
+
 class ConvBlock(nn.Module):
-    def __init__(self, kernel_type, kernel_x, kernel_y, in_dim, out_dim,
+    def __init__(self, kernel_type, kernel_x, kernel_y, hidden_dim, seq_len, time_hid, joints_hid,
                  dropout=0.1, kernel_x2=None, kernel_y2=None):
         super().__init__()
+        self.kernel_type = kernel_type
         if kernel_type == 0:
             padding1 = kernel_x // 2
             padding2 = kernel_y // 2
-            self.conv1 = nn.Conv2d(in_dim, out_dim//2, (kernel_x, 1), padding=(padding1, 1))
-            self.conv2 = nn.Conv2d(out_dim//2, out_dim, (kernel_y, 1), padding=(padding2, 1))
+            conv1_in = nn.Conv1d(seq_len, time_hid, kernel_x, padding=padding1)
+            conv1_out = nn.Conv1d(time_hid, seq_len, kernel_x, padding=padding1)
+            conv2_in = nn.Conv1d(hidden_dim, joints_hid, kernel_y, padding=padding2)
+            conv2_out = nn.Conv1d(joints_hid, hidden_dim, kernel_y, padding=padding2)
 
         if kernel_type == 1:
             if kernel_x2 is None:
@@ -18,63 +39,78 @@ class ConvBlock(nn.Module):
                 kernel_y2 = kernel_y
             padding1 = (kernel_x // 2, kernel_y2 // 2)
             padding2 = (kernel_y // 2, kernel_x2 // 2)
-            self.conv1 = nn.Conv2d(in_dim, out_dim//2, (kernel_x, kernel_y2), padding=padding1)
-            self.conv2 = nn.Conv2d(out_dim//2, out_dim, (kernel_y, kernel_x2), padding=padding2)
+            conv1_in = nn.Conv2d(1, time_hid, (kernel_x, kernel_y2), padding=padding1)
+            conv1_out = nn.Conv2d(time_hid, 1, (kernel_x, kernel_y2), padding=padding1)
+            conv2_in = nn.Conv2d(1, joints_hid, (kernel_y, kernel_x2), padding=padding2)
+            conv2_out = nn.Conv2d(joints_hid, 1, (kernel_y, kernel_x2), padding=padding2)
 
         if kernel_type == 2:
-            padding1 = kernel_x // 2
-            padding2 = kernel_y // 2
-            self.conv1 = nn.Conv2d(in_dim, out_dim//2, kernel_x, padding=padding1)
-            self.conv1 = nn.Conv2d(out_dim//2, out_dim, kernel_y, padding=padding2)
+            kernel = min(kernel_x, kernel_y)
+            padding = kernel // 2
+            conv1_in = nn.Conv2d(1, time_hid, kernel, padding=padding)
+            conv1_out = nn.Conv2d(time_hid, 1, kernel, padding=padding)
+            conv2_in = nn.Conv2d(1, joints_hid, kernel, padding=padding)
+            conv2_out = nn.Conv2d(joints_hid, 1, kernel, padding=padding)
 
-        self.norm1 = nn.BatchNorm2d(out_dim//2)
-        self.norm2 = nn.BatchNorm2d(out_dim)
-        self.nonlinear = nn.LeakyReLU(0.1)
-        self.drop = nn.Dropout(dropout)
-        self.pool = nn.MaxPool2d(2, stride=2)
+        self.norm1 = nn.LayerNorm(hidden_dim)
+        nonlinear1 = nn.ReLU()
+        nonlinear2 = nn.ReLU()
+        drop1 = nn.Dropout(dropout)
+        drop2 = nn.Dropout(dropout)
+        self.SpatioBlock = nn.Sequential(conv1_in,
+                                         nonlinear1,
+                                         drop1,
+                                         conv1_out)
+        self.se = SELayer(seq_len)
+        self.norm2 = nn.LayerNorm(hidden_dim)
+        self.TemporalBlock = nn.Sequential(conv2_in,
+                                           nonlinear2,
+                                           drop2,
+                                           conv2_out)
 
     def forward(self, x):
-        y = self.conv1(x)
-        y = self.norm1(y)
-        y = self.nonlinear(y)
-        y = self.drop(y)
-        y = y.transpose(3, 2)
-        y = self.conv2(y)
-        y = self.norm2(y)
-        y = self.nonlinear(y)
-        y = self.drop(y)
-        y = y.transpose(3, 2)
-        y = self.pool(y)
-        return y
+        y = self.norm1(x)
+        if self.kernel_type != 0:
+            y = y.unsqueeze(1)
+        y = self.SpatioBlock(y)
+        if self.kernel_type != 0:
+            y = y.squeeze(1)
+        y = self.se(y)
+        x = x + y
+        y = self.norm2(x)
+        y = y.transpose(1, 2)
+        if self.kernel_type != 0:
+            y = y.unsqueeze(1)
+        y = self.TemporalBlock(y)
+        if self.kernel_type != 0:
+            y = y.squeeze(1)
+        y = y.transpose(1, 2)
+        y = self.se(y)
+        x = x + y
+        return x
 
 
 class Model(nn.Module):
-    def __init__(self, kernel_type=0, kernel_x=5, kernel_y=5, num_layers=3, hidden_dim=64, channels=16,
-                 input_size=51, seq_len=10, pred_len=10):
+    def __init__(self, kernel_type=0, kernel_x=7, kernel_y=3, num_layers=4, hidden_dim=64,
+                 input_size=51, seq_len=10, pred_len=10, time_hid=32, joints_hid=128):
         """ Model initializer """
         super().__init__()
 
-        self.encoder = nn.Sequential(nn.Conv1d(seq_len, hidden_dim, 1), nn.Linear(input_size, hidden_dim))
-
+        self.encoder = nn.Linear(input_size, hidden_dim)
         layers = []
         for i in range(num_layers):
-            layers.append(ConvBlock(kernel_type, kernel_x, kernel_y, in_dim=1 if i == 0 else channels * 2 ** (i - 1),
-                                    out_dim=channels * 2 ** i))
+            layers.append(ConvBlock(kernel_type, kernel_x, kernel_y, hidden_dim,
+                                    seq_len, time_hid, joints_hid))
 
         self.conv_blocks = nn.Sequential(*layers)
 
-        self.decoder = nn.Sequential(nn.Conv2d(channels * 2 ** (num_layers - 1), 1, 1),
-                                     nn.AdaptiveMaxPool2d(1),
-                                     nn.Flatten(1, 2),
-                                     nn.Conv1d(1, pred_len, 1),
-                                     nn.Linear(1, input_size)
-                                     )
+        self.decoder = nn.Sequential(nn.Conv1d(seq_len, pred_len, 1),
+                                     nn.Linear(hidden_dim, input_size))
 
         return
 
     def forward(self, x):
         y = self.encoder(x)
-        y = y.unsqueeze(1)
         y = self.conv_blocks(y)
         out = self.decoder(y)
         return out

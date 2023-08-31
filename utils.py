@@ -3,6 +3,9 @@ import os
 
 
 def mpjpe_error(batch_pred, batch_gt):
+    if len(batch_pred.shape) == 2:
+        batch_pred = batch_pred.unsqueeze(1)
+        batch_gt = batch_gt.unsqueeze(1)
     batch_pred = batch_pred.contiguous().view(-1, 3)
     batch_gt = batch_gt.contiguous().view(-1, 3)
 

@@ -1,58 +1,56 @@
-from torch.utils.data import Dataset
-import numpy as np
-import data_utils
-import torch
-import os
 import json
-from sklearn.preprocessing import normalize
+import os
 
-#Nose = 0,
-#Neck = 1,
-#RShoulder = 2,
-#RElbow = 3,
-#RWrist = 4,
-#LShoulder = 5,
-#LElbow = 6,
-#LWrist = 7,
-#MidHip = 8,
-#RHip = 9,
-#RKnee = 10,
-#RAnkle = 11,
-#LHip = 12,
-#LKnee = 13,
-#LAnkle = 14,
-#REye = 15,
-#LEye = 16,
-#REar = 17,
-#LEar = 18,
-##Head = 19,  #unused
-##Belly = 20, #unused
-##LBToe = 21, #unused
-##LSToe = 22, #unused
-##LHeel = 23, #unused
-##RBToe = 24, #unused
-##RSToe = 25, #unused
-##RHeel = 26, #unused
-##NUM_KEYPOINTS = 27;
+import numpy as np
+from torch.utils.data import Dataset
+
+# Nose = 0,
+# Neck = 1,
+# RShoulder = 2,
+# RElbow = 3,
+# RWrist = 4,
+# LShoulder = 5,
+# LElbow = 6,
+# LWrist = 7,
+# MidHip = 8,
+# RHip = 9,
+# RKnee = 10,
+# RAnkle = 11,
+# LHip = 12,
+# LKnee = 13,
+# LAnkle = 14,
+# REye = 15,
+# LEye = 16,
+# REar = 17,
+# LEar = 18,
+# Head = 19,  #unused
+# Belly = 20, #unused
+# LBToe = 21, #unused
+# LSToe = 22, #unused
+# LHeel = 23, #unused
+# RBToe = 24, #unused
+# RSToe = 25, #unused
+# RHeel = 26, #unused
 
 KPS = [8, 9, 10, 11, 12, 13, 14, 20, 1, 0, 19, 5, 6, 7, 2, 3, 4]
 NUM_KPS_USED = 17
 
 joint_name_used = ["Hips", "RightUpLeg", "RightLeg", "RightFoot", "LeftUpLeg", "LeftLeg",
-                      "LeftFoot", "Spine", "Spine1", "Neck", "Head", "LeftShoulder", "LeftArm",
-                      "LeftForeArm", "RightShoulder", "RightArm",
-                      "RightForeArm"]
+                   "LeftFoot", "Spine", "Spine1", "Neck", "Head", "LeftShoulder", "LeftArm",
+                   "LeftForeArm", "RightShoulder", "RightArm",
+                   "RightForeArm"]
+
 
 class extra_Dataset(Dataset):
 
-    def __init__(self,data_dir,input_n,output_n,skip_rate):
+    def __init__(self, data_dir, input_n, output_n, skip_rate):
         """
-        :param path_to_data:
+        :param data_dir:
         :param input_n:
         :param output_n:
-        :param sample_rate:
+        :param skip_rate:
         """
-        self.path_to_data = os.path.join(data_dir,'VisionLabSS23_3DPoses')
+        self.path_to_data = os.path.join(data_dir, 'VisionLabSS23_3DPoses')
         self.in_n = input_n
         self.out_n = output_n
         self.sample_rate = 2
@@ -67,7 +65,6 @@ class extra_Dataset(Dataset):
                       "LeftHand", "LeftHandThumb", "Site", "L_Wrist_End", "Site", "RightShoulder", "RightArm",
                       "RightForeArm",
                       "RightHand", "RightHandThumb", "Site", "R_Wrist_End", "Site"]
-
 
         key = 0
 
@@ -89,28 +86,28 @@ class extra_Dataset(Dataset):
                     kps = frame['person']['keypoints']
 
                     for kp_idx in range(NUM_KPS_USED):
-                        if (KPS[kp_idx] == 19):
-                            all_xs.append((kps[17]['pos'][0] + kps[18]['pos'][0])/2-kps[8]['pos'][0])
-                            all_ys.append((kps[17]['pos'][1] + kps[18]['pos'][1])/2-kps[8]['pos'][1])
-                            all_zs.append((kps[17]['pos'][2] + kps[18]['pos'][2])/2-kps[8]['pos'][2])
-                        elif (KPS[kp_idx] == 20):
-                            all_xs.append((kps[8]['pos'][0] + kps[1]['pos'][0]) / 2-kps[8]['pos'][0])
-                            all_ys.append((kps[8]['pos'][1] + kps[1]['pos'][1]) / 2-kps[8]['pos'][1])
-                            all_zs.append((kps[8]['pos'][2] + kps[1]['pos'][2]) / 2-kps[8]['pos'][2])
+                        if KPS[kp_idx] == 19:
+                            all_xs.append((kps[17]['pos'][0] + kps[18]['pos'][0]) / 2 - kps[8]['pos'][0])
+                            all_ys.append((kps[17]['pos'][1] + kps[18]['pos'][1]) / 2 - kps[8]['pos'][1])
+                            all_zs.append((kps[17]['pos'][2] + kps[18]['pos'][2]) / 2 - kps[8]['pos'][2])
+                        elif KPS[kp_idx] == 20:
+                            all_xs.append((kps[8]['pos'][0] + kps[1]['pos'][0]) / 2 - kps[8]['pos'][0])
+                            all_ys.append((kps[8]['pos'][1] + kps[1]['pos'][1]) / 2 - kps[8]['pos'][1])
+                            all_zs.append((kps[8]['pos'][2] + kps[1]['pos'][2]) / 2 - kps[8]['pos'][2])
                         else:
                             kp = kps[KPS[kp_idx]]
-                            all_xs.append(kp['pos'][0]-kps[8]['pos'][0])
-                            all_ys.append(kp['pos'][1]-kps[8]['pos'][1])
-                            all_zs.append(kp['pos'][2]-kps[8]['pos'][2])
+                            all_xs.append(kp['pos'][0] - kps[8]['pos'][0])
+                            all_ys.append(kp['pos'][1] - kps[8]['pos'][1])
+                            all_zs.append(kp['pos'][2] - kps[8]['pos'][2])
 
-                all = np.array((all_xs, all_zs, all_ys), np.float32).T
-                all = normalize(all)
-                all = all.reshape(-1,17*3)
-                n, d = all.shape
+                all_p = np.array((all_xs, all_zs, all_ys), np.float32).T
+                # all_p = normalize(all_p)
+                all_p = all_p.reshape(-1, 17 * 3)
+                n, d = all_p.shape
                 even_list = range(0, n, self.sample_rate)
                 num_frames = len(even_list)
-                all = np.array(all[even_list, :])
-                self.p3d[key] = all;
+                all_p = np.array(all_p[even_list, :])
+                self.p3d[key] = all_p
                 valid_frames = np.arange(0, num_frames - seq_len + 1, skip_rate)
                 tmp_data_idx_1 = [key] * len(valid_frames)
                 tmp_data_idx_2 = list(valid_frames)
@@ -123,5 +120,5 @@ class extra_Dataset(Dataset):
     def __getitem__(self, item):
         key, start_frame = self.data_idx[item]
         fs = np.arange(start_frame, start_frame + self.in_n + self.out_n)
-        #print (self.p3d[key][fs][:,self.dimensions_to_use].shape)
+        # print (self.p3d[key][fs][:,self.dimensions_to_use].shape)
         return self.p3d[key][fs]
