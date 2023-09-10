@@ -50,8 +50,8 @@ def train_epoch_autoreg(model, loader, optimizer, dev, input_n, output_n, epoch,
                 input_train = sequences_train[:, i:, :]
                 input_train = torch.cat((input_train, pred), 1)
             optimizer.zero_grad()
-            # pred_one = model(input_train)[:, 0, :].unsqueeze(1)
-            pred_one = model(input_train)
+            pred_one = model(input_train)[:, 0, :].unsqueeze(1)
+            # pred_one = model(input_train)
             pred = torch.cat((pred, pred_one), 1)
         loss = mpjpe_error(pred, sequences_gt)
         tb_writer.add_scalar('loss/train', loss.item(), cnt+epoch*len(loader))
@@ -108,7 +108,8 @@ def eval_epoch_autoreg(model, loader, dev, input_n, output_n, epoch, tb_writer):
             else:
                 input_train = sequences_train[:, i:, :]
                 input_train = torch.cat((input_train, pred), 1)
-            pred_one = model(input_train)
+            # pred_one = model(input_train)
+            pred_one = model(input_train)[:, 0, :].unsqueeze(1)
             pred = torch.cat((pred, pred_one), 1)
         loss = mpjpe_error(pred, sequences_gt)
         tb_writer.add_scalar('loss/val', loss.item(), cnt + epoch * len(loader))
